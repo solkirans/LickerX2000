@@ -5,16 +5,19 @@
 // Constants
 const int I2C_SCL_PIN = 22; // I2C clock pin
 const int I2C_SDA_PIN = 21; // I2C data pin
-const float SensorMaxValue = 2000.0; // Maximum sensor range in mm
-const float SensorMinValue = 0.0;   // Minimum sensor range in mm
-const int MeasuredValuesArrayLength = 10;
+const float DistanceSensorMaxValue = 2000.0; // Maximum sensor range in mm
+const float DistanceSensorMinValue = 0.0;   // Minimum sensor range in mm
+const int MeasDistanceValuesArrayLength = 10;
 
 // Measured values array
-float measuredValues[MeasuredValuesArrayLength] = {0.0};
-int currentIndex = 0;
+float MeasDistanceValues[MeasDistanceValuesArrayLength] = {0.0};
+int MeasDistanceCurrentIndex = 0;
 
 // Initialize the VL53L0X sensor
 Adafruit_VL53L0X lox;
+bool DistanceSensorInitialized = false;
+//
+extern float calculateAverage(const float* array, size_t length); // Assuming this function exists
 
 // Function to initialize the I2C and distance sensor
 int initDistanceSensor() {
@@ -26,7 +29,7 @@ int initDistanceSensor() {
         Serial.println("[ERROR] Sensor not found. Check connections and power.");
         return -1;
     }
-
+    DistanceSensorInitialized = true;
     Serial.println("[DEBUG] Performing sensor health check...");
     VL53L0X_RangingMeasurementData_t measure;
     lox.rangingTest(&measure, false);
@@ -45,7 +48,7 @@ float readDistanceSensor() {
     Serial.println("[DEBUG] Reading distance sensor...");
 
     VL53L0X_RangingMeasurementData_t measure;
-    if (!lox.isEnabled()) {
+    if (!DistanceSensorInitialized) {
         Serial.println("[ERROR] Sensor not initialized or disabled.");
         return -1.0;
     }
@@ -59,12 +62,12 @@ float readDistanceSensor() {
 
     float distance = static_cast<float>(measure.RangeMilliMeter);
 
-    if (distance < SensorMinValue) {
+    if (distance < DistanceSensorMinValue) {
         Serial.printf("[WARNING] Measured value %.2f below minimum threshold.\n", distance);
         return -3.0;
     }
 
-    if (distance > SensorMaxValue) {
+    if (distance > DistanceSensorMaxValue) {
         Serial.printf("[WARNING] Measured value %.2f above maximum threshold.\n", distance);
         return -4.0;
     }
@@ -83,12 +86,11 @@ float getFilteredDistance() {
         return readValue;
     }
 
-    measuredValues[currentIndex] = readValue;
-    currentIndex = (currentIndex + 1) % MeasuredValuesArrayLength;
+    MeasDistanceValues[MeasDistanceCurrentIndex] = readValue;
+    MeasDistanceCurrentIndex = (MeasDistanceCurrentIndex + 1) % MeasDistanceValuesArrayLength;
 
     Serial.println("[DEBUG] Calculating average...");
-    extern float calculateAverage(const float* array, size_t length); // Assuming this function exists
-    float average = calculateAverage(measuredValues, MeasuredValuesArrayLength);
+    float average = calculateAverage(MeasDistanceValues, MeasDistanceValuesArrayLength);
     Serial.printf("[INFO] Filtered distance: %.2f mm.\n", average);
 
     return average;

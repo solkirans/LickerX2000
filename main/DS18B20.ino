@@ -4,17 +4,19 @@
 
 // Constants
 const int ONE_WIRE_PIN = 4; // Pin for OneWire communication
-const float SensorMaxValue = 125.0; // Maximum sensor range in Celsius
-const float SensorMinValue = -55.0; // Minimum sensor range in Celsius
-const int MeasuredValuesArrayLength = 10;
+const float TempSensorMaxValue = 125.0; // Maximum sensor range in Celsius
+const float TempSensorMinValue = -55.0; // Minimum sensor range in Celsius
+const int MeasTempValuesArrayLength = 10;
 
 // Measured values array
-float measuredValues[MeasuredValuesArrayLength] = {0.0};
-int currentIndex = 0;
+float MeasTempValues[MeasTempValuesArrayLength] = {0.0};
+int MeasTempCurrentIndex = 0;
 
 // Initialize OneWire and DallasTemperature libraries
 OneWire oneWire(ONE_WIRE_PIN);
 DallasTemperature sensors(&oneWire);
+
+extern float calculateAverage(const float* array, size_t length); // Assuming this function exists
 
 // Function to initialize the temperature sensor
 int initTemperatureSensor() {
@@ -42,12 +44,12 @@ float readTemperatureSensor() {
         return -1.0;
     }
 
-    if (tempC < SensorMinValue) {
+    if (tempC < TempSensorMinValue) {
         Serial.printf("[WARNING] Measured value %.2f below minimum threshold.\n", tempC);
         return -2.0;
     }
 
-    if (tempC > SensorMaxValue) {
+    if (tempC > TempSensorMaxValue) {
         Serial.printf("[WARNING] Measured value %.2f above maximum threshold.\n", tempC);
         return -3.0;
     }
@@ -66,12 +68,12 @@ float getFilteredTemperature() {
         return readValue;
     }
 
-    measuredValues[currentIndex] = readValue;
-    currentIndex = (currentIndex + 1) % MeasuredValuesArrayLength;
+    MeasTempValues[MeasTempCurrentIndex] = readValue;
+    MeasTempCurrentIndex = (MeasTempCurrentIndex + 1) % MeasTempValuesArrayLength;
 
     Serial.println("[DEBUG] Calculating average...");
-    extern float calculateAverage(const float* array, size_t length); // Assuming this function exists
-    float average = calculateAverage(measuredValues, MeasuredValuesArrayLength);
+
+    float average = calculateAverage(MeasTempValues, MeasTempValuesArrayLength);
     Serial.printf("[INFO] Filtered temperature: %.2f Celsius.\n", average);
 
     return average;

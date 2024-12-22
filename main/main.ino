@@ -6,46 +6,38 @@
    The code also prints the current state of the pins to the Serial Monitor at 115200 baud.
 */
 
-const int pin1 = 16;
-const int pin2 = 17;
+// Constants
+const unsigned long interval = 100; // Interval in milliseconds
+
+// Variables
+unsigned long previousMillis = 0; // Stores the last time the function was called
 
 void setup() {
   // Initialize serial communication at 115200 baud
+  // [UNCHANGED] Initialize serial communication for debugging
   Serial.begin(115200);
 
-  // Set pins as outputs
-  pinMode(pin1, OUTPUT);
-  pinMode(pin2, OUTPUT);
+  // [UNCHANGED] Initialize temperature sensor and halt if initialization fails
+  if (initTemperatureSensor() != 0) {
+    while (1); // [UNCHANGED] Enter infinite loop to prevent undefined behavior
+  }
 
-  // Initial state is LOW
-  digitalWrite(pin1, LOW);
-  digitalWrite(pin2, LOW);
+  // [UNCHANGED] Initialize distance sensor and halt if initialization fails
+  if (initDistanceSensor() != 0) {
+    while (1); // [UNCHANGED] Enter infinite loop to prevent undefined behavior
+  }
+
+  // [UNCHANGED] Initialize the limit switch and output signals
+  InitLimitSwitch();
+  InitOutput();
 }
 
 void loop() {
-  // Turn both pins ON (HIGH)
-  digitalWrite(pin1, HIGH);
-  digitalWrite(pin2, HIGH);
-  Serial.print("Pin ");
-  Serial.print(pin1);
-  Serial.print(" and ");
-  Serial.print(pin2);
-  Serial.println(" is ON");
-  
-  // Keep them enabled for 2 seconds
-  delay(2000);
+  unsigned long currentMillis = millis(); // [UPDATED] Use millis() for non-blocking timing
 
-  // Turn both pins OFF (LOW)
-  digitalWrite(pin1, LOW);
-  digitalWrite(pin2, LOW);
-  Serial.print("Pin ");
-  Serial.print(pin1);
-  Serial.print(" and  ");
-  Serial.print(pin2);
-  Serial.println(" is OFF");
-  
-  // Keep them disabled for 2 seconds
-  delay(2000);
-
-  // The loop will now repeat, maintaining a 4-second cycle (2s ON, 2s OFF).
+  // [UPDATED] Replaced delay with millis-based non-blocking timing to improve responsiveness
+  if (currentMillis - previousMillis >= interval) {
+    previousMillis = currentMillis; // Update the last execution time
+    ControlLoop(); // [UNCHANGED] Call the periodic function to execute main logic
+  }
 }
