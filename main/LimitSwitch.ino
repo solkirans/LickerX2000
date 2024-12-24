@@ -1,10 +1,14 @@
 #include <Arduino.h>
 
-#define LIMIT_SWITCH_PIN 5
-const unsigned long DEBOUNCE_TIME_LOW = 1000; // 1 second for inactive state
-const unsigned long DEBOUNCE_TIME_HIGH = 250; // 250 ms for active state
 
-int lastSwitchState = HIGH; // Stores the last stable state of the switch
+// Constants and Paremeters
+#define LIMIT_SWITCH_PIN 5
+const unsigned long DEBOUNCE_TIME_LOW = 250;  // 0.25 second to transition to low state
+const unsigned long DEBOUNCE_TIME_HIGH = 1000; // 1 second to transition to high state
+
+
+
+bool lastSwitchState = false; // Stores the last stable state of the switch
 unsigned long lastDebounceTime = 0; // Tracks the last debounce time
 
 void InitLimitSwitch() {
@@ -13,7 +17,7 @@ void InitLimitSwitch() {
 
 bool ReadLimitSwitch() { // [UNCHANGED] Original function structure retained
     // [UPDATED] Reading the current state of the limit switch
-    int currentSwitchState = digitalRead(LIMIT_SWITCH_PIN);
+    bool currentSwitchState = digitalRead(LIMIT_SWITCH_PIN);
     unsigned long currentTime = millis();
 
     // [UPDATED] Debounce logic to handle state transitions
@@ -24,15 +28,15 @@ bool ReadLimitSwitch() { // [UNCHANGED] Original function structure retained
     }
 
     // [UPDATED] Stable LOW state (inactive) validation after debounce time
-    if (currentSwitchState == LOW && (currentTime - lastDebounceTime) >= DEBOUNCE_TIME_LOW) {
+    if (currentSwitchState == false && (currentTime - lastDebounceTime) >= DEBOUNCE_TIME_LOW) {
         return false; // Limit switch is inactive
     }
 
     // [UPDATED] Stable HIGH state (active) validation after debounce time
-    if (currentSwitchState == HIGH && (currentTime - lastDebounceTime) >= DEBOUNCE_TIME_HIGH) {
+    if (currentSwitchState == true && (currentTime - lastDebounceTime) >= DEBOUNCE_TIME_HIGH) {
         return true; // Limit switch is active
     }
 
     // [UNCHANGED] No state change detected, retain the last known state
-    return lastSwitchState == HIGH;
+    return lastSwitchState == false;
 }

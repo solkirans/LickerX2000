@@ -5,39 +5,61 @@
 
    The code also prints the current state of the pins to the Serial Monitor at 115200 baud.
 */
+#include "VL53L0XOccupancy.h"
+
 
 // Constants
-const unsigned long interval = 100; // Interval in milliseconds
-
+const unsigned long measurement_interval = 50; // Interval in milliseconds
+const unsigned long control_interval = 500; // Interval in milliseconds
 // Variables
-unsigned long previousMillis = 0; // Stores the last time the function was called
+unsigned long previousMillisMeasurement = 0; // Stores the last time the function was called
+unsigned long previousMillisControl = 0; // Stores the last time the function was called
 
 void setup() {
   // Initialize serial communication at 115200 baud
   // [UNCHANGED] Initialize serial communication for debugging
   Serial.begin(115200);
+  delay(100); // Wait for 100 milliseconds
+  InitOutput();
+  delay(100); // Wait for 100 milliseconds
+  if (I2C_init())
+  {
+    while(1);
+  }
+  delay(100); // Wait for 100 milliseconds
 
+  // Initialize the sensor
+  int return_VL53L0X_Init = VL53L0X_Init();
+  if (return_VL53L0X_Init) {
+    Serial.print("Initialization failed with error code: ");
+    Serial.println(return_VL53L0X_Init);
+    while (1); // Halt execution on error
+  }
   // [UNCHANGED] Initialize temperature sensor and halt if initialization fails
+  /*
   if (initTemperatureSensor() != 0) {
     while (1); // [UNCHANGED] Enter infinite loop to prevent undefined behavior
   }
+  delay(100); // Wait for 100 milliseconds
+  */
 
   // [UNCHANGED] Initialize distance sensor and halt if initialization fails
-  if (initDistanceSensor() != 0) {
-    while (1); // [UNCHANGED] Enter infinite loop to prevent undefined behavior
-  }
-
+  
   // [UNCHANGED] Initialize the limit switch and output signals
-  InitLimitSwitch();
-  InitOutput();
+  //InitLimitSwitch();
 }
 
 void loop() {
   unsigned long currentMillis = millis(); // [UPDATED] Use millis() for non-blocking timing
 
   // [UPDATED] Replaced delay with millis-based non-blocking timing to improve responsiveness
-  if (currentMillis - previousMillis >= interval) {
-    previousMillis = currentMillis; // Update the last execution time
-    ControlLoop(); // [UNCHANGED] Call the periodic function to execute main logic
+  if (currentMillis - previousMillisMeasurement >= measurement_interval) {
+    previousMillisMeasurement = currentMillis; // Update the last execution time
+      VL53L0X_ReadMeasurement();
+      VL53L0X_GetAverage();
+  }
+  if (currentMillis - previousMillisControl >= control_interval) {
+    previousMillisControl = currentMillis; // Update the last execution time
+      VL53L0X_GetAverage();
   }
 }

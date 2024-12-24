@@ -38,8 +38,7 @@ double calculateDerivative(double currentTemp, double previousTemp, double delta
 void updateSignals() {
     // [UNCHANGED] Reading hardware input values
     LimitSwitchStatus = ReadLimitSwitch();   
-    TempFilteredMeas = getFilteredTemperature();
-    DistanceFilteredMeas = getFilteredDistance();  
+    //TempFilteredMeas = getFilteredTemperature();
     
     // Occupancy Status Logic
     if (DistanceFilteredMeas < 0) {
