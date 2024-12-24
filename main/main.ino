@@ -1,65 +1,45 @@
-/*
-   This example code sets GPIO16 and GPIO17 on an ESP32 as output pins.
-   They will turn on (HIGH) together for 2 seconds and then off (LOW) for 2 seconds, repeatedly.
-   This creates a 4-second cycle with a 50% duty cycle: 2 seconds on, 2 seconds off.
-
-   The code also prints the current state of the pins to the Serial Monitor at 115200 baud.
-*/
-#include "VL53L0XOccupancy.h"
-
-
-// Constants
-const unsigned long measurement_interval = 50; // Interval in milliseconds
-const unsigned long control_interval = 500; // Interval in milliseconds
-// Variables
-unsigned long previousMillisMeasurement = 0; // Stores the last time the function was called
-unsigned long previousMillisControl = 0; // Stores the last time the function was called
+#include "VL53L0XSensor.h"
 
 void setup() {
-  // Initialize serial communication at 115200 baud
-  // [UNCHANGED] Initialize serial communication for debugging
-  Serial.begin(115200);
-  delay(100); // Wait for 100 milliseconds
-  InitOutput();
-  delay(100); // Wait for 100 milliseconds
-  if (I2C_init())
-  {
-    while(1);
-  }
-  delay(100); // Wait for 100 milliseconds
+    Serial.begin(115200);
+    delay(100);
 
-  // Initialize the sensor
-  int return_VL53L0X_Init = VL53L0X_Init();
-  if (return_VL53L0X_Init) {
-    Serial.print("Initialization failed with error code: ");
-    Serial.println(return_VL53L0X_Init);
-    while (1); // Halt execution on error
-  }
-  // [UNCHANGED] Initialize temperature sensor and halt if initialization fails
-  /*
-  if (initTemperatureSensor() != 0) {
-    while (1); // [UNCHANGED] Enter infinite loop to prevent undefined behavior
-  }
-  delay(100); // Wait for 100 milliseconds
-  */
+    int initStatus = VL53L0X_SensorInit();
+    if (initStatus < 0) {
+        Serial.print("[ERROR] Sensor initialization failed with error code: ");
+        Serial.println(initStatus);
+        while (1); // Halt if initialization fails
+    }
 
-  // [UNCHANGED] Initialize distance sensor and halt if initialization fails
-  
-  // [UNCHANGED] Initialize the limit switch and output signals
-  //InitLimitSwitch();
+    Serial.println("[INFO] All sensors initialized successfully.");
 }
 
 void loop() {
-  unsigned long currentMillis = millis(); // [UPDATED] Use millis() for non-blocking timing
+    static unsigned long lastMeasurementTime = 0;
+    static unsigned long lastAveragePrintTime = 0;
+    unsigned long currentTime = millis();
 
-  // [UPDATED] Replaced delay with millis-based non-blocking timing to improve responsiveness
-  if (currentMillis - previousMillisMeasurement >= measurement_interval) {
-    previousMillisMeasurement = currentMillis; // Update the last execution time
-      VL53L0X_ReadMeasurement();
-      VL53L0X_GetAverage();
-  }
-  if (currentMillis - previousMillisControl >= control_interval) {
-    previousMillisControl = currentMillis; // Update the last execution time
-      VL53L0X_GetAverage();
-  }
+    if (currentTime - lastMeasurementTime >= 100) {
+        lastMeasurementTime = currentTime;
+        VL53L0X_ReadMeasurement();
+    }
+
+    if (currentTime - lastAveragePrintTime >= 500) {
+        lastAveragePrintTime = currentTime;
+
+        for (uint8_t i = 0; i < NUM_SENSORS; i++) {
+            float average = VL53L0X_GetAverage(i);
+            if (average < 0) {
+                Serial.print("[ERROR] Failed to calculate average for sensor ");
+                Serial.print(i);
+                Serial.println("!");
+            } else {
+                Serial.print("[INFO] Sensor ");
+                Serial.print(i);
+                Serial.print(" average distance: ");
+                Serial.print(average);
+                Serial.println(" mm");
+            }
+        }
+    }
 }
