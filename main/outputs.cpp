@@ -1,28 +1,26 @@
 #include "outputs.h"
 
-// Global Variable Definitions
+// Global Variables
 bool HeaterRequest = false;
 bool PumpRequest = false;
 int8_t PumpStatus = PumpStatus_NA;
 
-// Local Variables
 unsigned long LedStartTime = 0;
 unsigned long PumpStartTime = 0;
 bool PumpRequest_Prev = false;
 bool HeaterRequest_Prev = false;
 unsigned long HeaterStartTime = 0;
-uint8_t LedStatus = 0;
+uint8_t LedStatus = Pin_Off;
+uint8_t LedAnimationState = LedAnimationState_NA;
+uint8_t LedAnimationState_Prev = LedAnimationState_NA;
 
-// PumpSetup Function
 void PumpSetup(void) {
     pinMode(PumpPin, OUTPUT);
     digitalWrite(PumpPin, Pin_Off);
     PumpRequest_Prev = false;
-    Serial.println("INFO: Pump setup completed.");
 }
 
-// PumpStart Function
-void PumpStart() {
+void PumpStart(void) {
     unsigned long interval = millis() - PumpStartTime;
 
     if (PumpRequest && !PumpRequest_Prev) {
@@ -45,22 +43,16 @@ void PumpStart() {
     }
 }
 
-// HeaterSetup Function
 void HeaterSetup(void) {
     pinMode(HeaterPin, OUTPUT);
     digitalWrite(HeaterPin, Pin_Off);
     HeaterRequest_Prev = false;
-    Serial.println("INFO: Heater setup completed.");
 }
 
-// HeaterStart Function
 int8_t HeaterStart(float TempTarget_, float TempCurrent_, int8_t TempSensorStatus_) {
-    unsigned long interval = millis() - HeaterStartTime;
+    if (TempSensorStatus_ != HeaterTempStatus_Ready) return HeaterTempStatus_NA;
 
-    if (TempSensorStatus_ != 1)
-    {
-      return HeaterTempStatus_NA;
-    }
+    unsigned long interval = millis() - HeaterStartTime;
 
     if (HeaterRequest && !HeaterRequest_Prev) {
         HeaterStartTime = millis();
@@ -68,8 +60,6 @@ int8_t HeaterStart(float TempTarget_, float TempCurrent_, int8_t TempSensorStatu
     }
 
     if (HeaterRequest) {
-        Serial.print("TempCurrent:");
-        Serial.println(TempCurrent_);
         if (interval < HeaterTimeout) {
             if (TempCurrent_ < TempTarget_) {
                 digitalWrite(HeaterPin, Pin_On);
@@ -87,40 +77,62 @@ int8_t HeaterStart(float TempTarget_, float TempCurrent_, int8_t TempSensorStatu
         HeaterRequest_Prev = false;
         return HeaterTempStatus_Off;
     }
-
-    return HeaterTempStatus_NA;
 }
 
-// LedSetup Function
 void LedSetup(void) {
-    pinMode(LedPin, OUTPUT);
-    digitalWrite(LedPin, Pin_Off);
-    Serial.println("INFO: LED setup completed.");
+    ledcSetup(PWM_CHANNEL, PWM_FREQ, PWM_RESOLUTION);
+    ledcAttachPin(LedPin, PWM_CHANNEL);
+    ledcWrite(PWM_CHANNEL, 0);
 }
 
-// LedFlash Function
-void LedFlash(void) {
-    unsigned long interval = millis() - LedStartTime;
+void LedSineAnimation(uint16_t Amplitude, uint8_t BPM, uint8_t StateRequested) {
+    static unsigned long lastUpdate = 0;
+    unsigned long currentTime = millis();
 
-    if (interval > LedFlashInterval) {
-        if (LedStatus == 0) {
-            LedSet(100);
-        } else {
-            LedSet(0);
-        }
-        LedStartTime = millis();
+    if (StateRequested != LedAnimationState_Prev || LedAnimationState != StateRequested) {
+        LedAnimationState_Prev = StateRequested;
+        lastUpdate = currentTime;
     }
-}
 
-// LedSet Function
-void LedSet(uint8_t State) {
-    uint8_t StateLocal = (State > 100) ? 100 : State;
-    analogWrite(LedPin, StateLocal * 2.55); // Scale 0-100 to 0-255
-    LedStatus = StateLocal;
-}
+    switch (StateRequested) {
+        case LedAnimationState_Stop:
+            ledcWrite(PWM_CHANNEL, 0);
+            break;
 
-// LedTempAnimation Function
-void LedTempAnimation(float TempCurrent_, float TempSensorOpMin_, float TempSensorOpMax_) {
-    uint8_t RequestedPWMPercentage = (uint8_t)(((TempCurrent_ - TempSensorOpMin_) / (TempSensorOpMax_ - TempSensorOpMin_)) * 100);
-    LedSet(RequestedPWMPercentage);
+        case LedAnimationState_Set:
+            ledcWrite(PWM_CHANNEL, Amplitude > PWM_MAX ? PWM_MAX : Amplitude);
+            break;
+
+        case LedAnimationState_Off:
+            ledcWrite(PWM_CHANNEL, 0);
+            break;
+
+        case LedAnimationState_On:
+            ledcWrite(PWM_CHANNEL, PWM_MAX);
+            break;
+
+        case LedAnimationState_Flashing:
+            if ((currentTime / (60000 / BPM)) % 2 == 0) {
+                ledcWrite(PWM_CHANNEL, Amplitude > PWM_MAX ? PWM_MAX : Amplitude);
+            } else {
+                ledcWrite(PWM_CHANNEL, 0);
+            }
+            break;
+
+        case LedAnimationState_Sine: {
+            float phase = (currentTime % (60000 / BPM)) / (float)(60000 / BPM);
+            float sineValue = 0.5 * (1 + sin(2 * PI * phase - PI / 2));
+            uint32_t pwmValue = sineValue * (Amplitude > PWM_MAX ? PWM_MAX : Amplitude);
+            ledcWrite(PWM_CHANNEL, pwmValue);
+            break;
+        }
+
+        case LedAnimationState_Transition: {
+            // Smooth transition logic
+            break;
+        }
+
+        default:
+            break;
+    }
 }
