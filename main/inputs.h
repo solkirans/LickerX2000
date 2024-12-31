@@ -4,7 +4,7 @@
 #include <Bounce2.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
-
+#include "Logger.h"
 // Constants
 #define TempSensorPin 32
 #define ButtonPin 33
@@ -18,7 +18,7 @@
 #define TempSensorAbsMax 125
 #define TempSensorAbsMin -55
 #define TempSensorOpMax 50
-#define TempSensorOpMin 15
+#define TempSensorOpMin 5
 
 // Global Variables
 extern int8_t TempSensorStatus;

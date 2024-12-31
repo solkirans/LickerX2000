@@ -50,34 +50,20 @@ void HeaterSetup(void) {
 }
 
 int8_t HeaterStart(float TempTarget_, float TempCurrent_, int8_t TempSensorStatus_) {
-    if (TempSensorStatus_ != HeaterTempStatus_Ready) return HeaterTempStatus_NA;
-
-    unsigned long interval = millis() - HeaterStartTime;
-
-    if (HeaterRequest && !HeaterRequest_Prev) {
-        HeaterStartTime = millis();
-        HeaterRequest_Prev = HeaterRequest;
-    }
-
-    if (HeaterRequest) {
-        if (interval < HeaterTimeout) {
-            if (TempCurrent_ < TempTarget_) {
-                digitalWrite(HeaterPin, Pin_On);
-                return HeaterTempStatus_Ongoing;
-            } else {
-                digitalWrite(HeaterPin, Pin_Off);
-                return HeaterTempStatus_Ready;
-            }
-        } else {
-            digitalWrite(HeaterPin, Pin_Off);
-            return HeaterTempStatus_Timeout;
-        }
-    } else {
+    if (TempSensorStatus_ != HeaterTempStatus_Ready || !HeaterRequest) {
         digitalWrite(HeaterPin, Pin_Off);
-        HeaterRequest_Prev = false;
-        return HeaterTempStatus_Off;
+        return HeaterRequest ? HeaterTempStatus_NA : HeaterTempStatus_Off;
     }
+
+    if (millis() - HeaterStartTime >= HeaterTimeout) {
+        digitalWrite(HeaterPin, Pin_Off);
+        return HeaterTempStatus_Timeout;
+    }
+
+    digitalWrite(HeaterPin, TempCurrent_ < TempTarget_ ? Pin_On : Pin_Off);
+    return TempCurrent_ < TempTarget_ ? HeaterTempStatus_Ongoing : HeaterTempStatus_Ready;
 }
+
 
 void LedSetup(void) {
     ledcSetup(PWM_CHANNEL, PWM_FREQ, PWM_RESOLUTION);

@@ -19,7 +19,7 @@ bool ReadButton() {
     bool roseEvent = buttonFilter.rose();
     if (roseEvent==true)
     {
-      Serial.println("Button Rise");
+      PrintText(LoggerDebugLevel_Debug, "Button Rise");
     }
     return roseEvent;
 }
@@ -36,15 +36,8 @@ void SetupTempSensor() {
 float ReadTempSensor() {
     tempSensor.requestTemperatures();
     float TempCurrentLocal = tempSensor.getTempCByIndex(0);
-
-    if (TempCurrentLocal < TempSensorAbsMin || TempCurrentLocal > TempSensorAbsMax) {
-        TempSensorStatus = TempSensorStatus_OutOfAbsLimit;
-    } else if (TempCurrentLocal < TempSensorOpMin || TempCurrentLocal > TempSensorOpMax) {
-        TempSensorStatus = TempSensorStatus_OutOfOpLimit;
-    } else {
-        TempPrev = TempCurrentLocal;
-        TempSensorStatus = TempSensorStatus_OK;
-    }
-
+    TempSensorStatus = (TempCurrentLocal < TempSensorOpMin || TempCurrentLocal > TempSensorOpMax)
+                       ? TempSensorStatus_OutOfOpLimit
+                       : TempSensorStatus_OK;
     return TempCurrentLocal;
 }

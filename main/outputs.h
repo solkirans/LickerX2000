@@ -2,7 +2,7 @@
 #define OUTPUTS_H
 
 #include <Arduino.h>
-
+#include "Logger.h"
 // Global Variables
 extern bool HeaterRequest;
 extern bool PumpRequest;
@@ -22,13 +22,13 @@ void LedSineAnimation(uint16_t Amplitude, uint8_t BPM, uint8_t StateRequested);
 #define LedPin 25
 #define Pin_Off 0
 #define Pin_On 1
-#define HeaterTimeout 180000 // ms
+#define HeaterTimeout 600000 // ms
 #define HeaterTempStatus_NA 0
 #define HeaterTempStatus_Ready 1
 #define HeaterTempStatus_Off 2
 #define HeaterTempStatus_Ongoing 3
 #define HeaterTempStatus_Timeout -1
-#define PumpTimeout 60000 // ms
+#define PumpTimeout 120000 // ms
 #define PumpStatus_NA 0
 #define PumpStatus_Off 1
 #define PumpStatus_On 2

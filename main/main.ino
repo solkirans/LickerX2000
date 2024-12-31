@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include "inputs.h"
 #include "outputs.h"
-
+#include "Logger.h"
 // Parameters
 #define TempTarget 37
 #define State_NA 0
@@ -20,8 +20,6 @@
 // Variables
 uint8_t StateCurrent = State_NA;
 uint8_t StatePrev = State_NA;
-
-bool SerialEnable = false;
 
 // Helper Function to Convert State and Status to String
 String getStateName(uint8_t state) {
@@ -64,8 +62,14 @@ String getPumpStatusName(int8_t status) {
 }
 
 void setup() {
-    // Initialize serial port
-    Serial.begin(115200);
+    // Initialize Logger
+    SetupLogger();
+
+
+        // Test printing text
+    int8_t result = PrintText(LoggerDebugLevel_Debug, "Testing Logger...");
+
+
 
     // Initialize state and requests
     StateCurrent = State_Init;
@@ -82,7 +86,7 @@ void setup() {
 
     // Check if TempSensor setup returned an error
     if (TempSensorStatus < 0) {
-        Serial.println("[ERROR] Temperature Sensor Initialization Failed!");
+        PrintText(LoggerDebugLevel_Error, " Temperature Sensor Initialization Failed!");
         while (1); // Halt execution
     }
 }
@@ -98,25 +102,17 @@ void loop() {
     int8_t heaterStatus = HeaterStart(TempTarget, TempCurrent , TempSensorStatus);
     bool ButtonState = ReadButton(); 
     PumpStart();
-    if (SerialEnable)
-    {
-      // Debug Outputs
-      Serial.print("[INFO] Temperature: ");
-      Serial.print(TempCurrent);
-      Serial.print(" PumpPin: ");
-      Serial.print(PumpPinState);
-      Serial.print(" HeaterPin: ");
-      Serial.println(HeaterPinState);
-      Serial.print("[INFO] StateCurrent: ");
-      Serial.print(getStateName(StateCurrent));
-      Serial.print(" Pump Status: ");
-      Serial.println(getPumpStatusName(PumpStatus));
-      Serial.print(" Heater Status: ");
-      Serial.println(getHeaterStatusName(heaterStatus));
-      delay(50);
-    }
+    // Debug Outputs
+    String message = "Temperature: " + String(TempCurrent) + " \n\r";
+    PrintText(LoggerDebugLevel_Info, message );
+    message =  "PumpPin: " + String(PumpPinState) + " HeaterPin: " + String(HeaterPinState) + " \n\r";
+    PrintText(LoggerDebugLevel_Debug, message);
+    message = "StateCurrent:" + getStateName(StateCurrent) + " Pump Status: " + getPumpStatusName(PumpStatus) + " Heater Status: "  +getHeaterStatusName(heaterStatus) + " \n\r";
+    PrintText(LoggerDebugLevel_Debug, message);
+
     // State Machine Logic
-    switch (StateCurrent) {
+
+      switch (StateCurrent) {
         case State_Init:
             LedSineAnimation(4096, 60, LedAnimationState_Off);
             StateCurrent = State_Idle;
@@ -193,4 +189,5 @@ void loop() {
             StateCurrent = State_NA;
             break;
     }
+    
 }
